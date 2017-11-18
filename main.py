@@ -8,7 +8,6 @@ import os.path
 import socket
 import fcntl
 import struct
-
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return socket.inet_ntoa(fcntl.ioctl(
@@ -55,8 +54,14 @@ def cli():
 @click.argument('bucket')
 @click.argument('username', default='pi-user')
 @click.option('--name')
-def register(bucket, username, name):
-    s3 = boto3.resource('s3')
+@click.option('--profile', default='default')
+def register(bucket, username, name, profile):
+    if (profile):
+        session = boto3.session.Session(profile_name=profile) 
+        print 'Profile: ' + profile
+        s3 = session.resource('s3')
+    else:
+        s3 = boto3.resource('s3')
 
     haikunator = Haikunator()
     if not name:
@@ -73,8 +78,9 @@ def register(bucket, username, name):
     password=haikunator.haikunate(token_length=0)
     encPass = crypt.crypt(password,"22")
     os.system("sudo userdel {} || true".format(username))
-    os.system("sudo useradd -G sudo -p {} {}".format(encPass, username))
+    os.system("sudo useradd -p {} -d /home/{} {}".format(encPass, username, username))
     ip_address = get_ip_address('wlan0')
+    print 'Registering {} with bucket {}'.format(name, bucket)
     s3.Object(bucket, name).put(Body='IPAddress: {}\nUsername: {}\nPassword: {}\n'
                                 .format(ip_address, username, password))
     os.system("sudo mkdir -p /etc/pi-case")
