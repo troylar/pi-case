@@ -52,7 +52,7 @@ def cli():
 
 @cli.command()
 @click.argument('bucket')
-@click.argument('username', default='pi-user')
+@click.argument('username', default='root')
 @click.option('--name')
 @click.option('--profile', default='default')
 def register(bucket, username, name, profile):
@@ -76,14 +76,11 @@ def register(bucket, username, name, profile):
     print 'Registration Name = {}'.format(name)
 
     password=haikunator.haikunate(token_length=0)
-    encPass = crypt.crypt(password,"22")
-    os.system("sudo userdel {} || true".format(username))
-    os.system("sudo useradd -p {} -d /home/{} {}".format(encPass, username, username))
     ip_address = get_ip_address('wlan0')
     print 'Registering {} with bucket {}'.format(name, bucket)
+    os.system('echo "{}:{}" | chpasswd'.format(username, password))
     s3.Object(bucket, name).put(Body='IPAddress: {}\nUsername: {}\nPassword: {}\n'
                                 .format(ip_address, username, password))
-    os.system("sudo mkdir -p /etc/pi-case")
     os.system("echo {} | sudo tee /etc/pi-case/key".format(name))
      
 
